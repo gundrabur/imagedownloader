@@ -1,17 +1,22 @@
-# Image Downloader
+# Media Downloader
 
-A Python script that downloads all media files (images, videos, audio) from a webpage, including files referenced in CSS and JavaScript.
+A Python script that downloads images, videos, and audio files from any webpage with an organized folder structure and progress tracking.
 
 ## Features
 
-- Downloads images (jpg, png, gif, webp, svg, etc.)
-- Downloads videos (mp4, webm, mov, etc.)
-- Downloads audio files (mp3, wav, ogg, etc.)
-- Parses CSS files for background images and other media references
-- Scans JavaScript files for media URLs
-- Preserves directory structure from the original website
-- Generates a detailed manifest of all downloaded files
-- Handles duplicate filenames automatically
+- **Media-focused**: Downloads only images, videos, and audio files
+- **Organized structure**: Saves files in dedicated folders (images/, videos/, audio/)
+- **Progress tracking**: Shows a visual progress bar during downloads
+- **Smart categorization**: Automatically categorizes files by type
+- **Duplicate handling**: Handles duplicate filenames automatically
+- **Timestamped folders**: Creates unique folders for each download session
+- **Summary reporting**: Provides detailed download statistics
+
+## Supported File Types
+
+- **Images**: jpg, jpeg, png, gif, webp, svg, avif, tiff, tif, bmp, ico
+- **Videos**: mp4, webm, ogv, mov, avi, wmv, flv, mkv, mpg, mpeg, m4v
+- **Audio**: mp3, wav, ogg, aac, flac, m4a, wma, opus
 
 ## Installation
 
@@ -37,20 +42,40 @@ python imagedownloader.py
 
 ## Output
 
-The script creates a `downloaded_media` directory containing:
-- `page.html` - The original HTML page
-- `_css/` - Downloaded CSS files
-- `_js/` - Downloaded JavaScript files
-- `[domain]/` - Media files organized by domain and path
-- `manifest.json` - Detailed information about all downloads
+The script creates a timestamped directory in your Downloads folder with organized subfolders:
+
+```
+imagedownloader_[domain]_[timestamp]/
+├── images/          # All image files
+├── videos/          # All video files  
+├── audio/           # All audio files
+└── manifest.json    # Detailed download information
+```
+
+Example folder: `imagedownloader_example.com_20250926_113017`
+
+### Progress Display
+During download, you'll see a real-time progress bar:
+```
+Progress: |████████████████████████████████████████| 25/25 (100.0%)
+```
+
+### Summary Report
+After completion, the script shows:
+- Total files downloaded by category
+- Error count and success rate
+- Output folder location
+- Manifest file location
 
 ## Configuration
 
+The script automatically saves files to your Downloads folder in a timestamped subdirectory.
 You can modify these constants in the script:
-- `OUT_DIR` - Output directory name
 - `UA` - User-Agent string
 - `TIMEOUT` - Request timeout in seconds
 - `allowed_ext` - Set of supported file extensions
+
+The Downloads folder is automatically detected for the active user.
 
 ## License
 
