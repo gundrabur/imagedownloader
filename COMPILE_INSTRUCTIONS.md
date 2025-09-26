@@ -134,7 +134,7 @@ chmod +x compile_macos_app.sh
 Run from project root:
 
 ```bat
-
+compile_windows_app.bat
 ```
 
 Outputs:

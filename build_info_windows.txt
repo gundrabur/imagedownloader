@@ -1,0 +1,9 @@
+Media Downloader - Windows Build Info
+==================================
+Build Date: 26.09.2025 23:36:25,04
+Python Version: 3.13.7
+PyInstaller Version: 6.16.0
+App Version: 1.0.0
+Executable: dist\MediaDownloader.exe
+Zip Package: build\MediaDownloader_windows_x64_v1.0.0.zip
+Status: SUCCESS
