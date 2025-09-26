@@ -95,6 +95,7 @@ class MediaExtractor(HTMLParser):
         self.imgs = set()
         self.videos = set()
         self.sources = set()
+        self.css_urls = set()  # For inline CSS background images
         
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -107,9 +108,15 @@ class MediaExtractor(HTMLParser):
                     if url_parts: 
                         url = url_parts[0]
                         if url: self.imgs.add(url)
+            # Check for data-src (lazy loading)
+            if 'data-src' in a:
+                self.imgs.add(a['data-src'])
         elif tag in ('video', 'audio'):
             if 'src' in a: 
                 self.videos.add(a['src'])
+            # Check for poster attribute on video tags
+            if tag == 'video' and 'poster' in a:
+                self.imgs.add(a['poster'])
         elif tag == 'source':
             if 'src' in a: 
                 self.sources.add(a['src'])
@@ -119,6 +126,15 @@ class MediaExtractor(HTMLParser):
                     if url_parts:
                         url = url_parts[0]
                         if url: self.sources.add(url)
+        
+        # Check for inline style attributes with background images
+        if 'style' in a:
+            style = a['style']
+            # Look for url() in CSS
+            import re
+            for match in re.findall(r'url\(\s*["\']?([^"\')\s]+)["\']?\s*\)', style, re.IGNORECASE):
+                if match and not match.lower().startswith(('data:', 'javascript:', 'about:')):
+                    self.css_urls.add(match)
 
 # Fetch base HTML
 def main():
@@ -136,18 +152,60 @@ def main():
 
     # Extract media candidates from HTML
     candidates = set()
-    for u in list(parser.imgs) + list(parser.videos) + list(parser.sources):
+    for u in list(parser.imgs) + list(parser.videos) + list(parser.sources) + list(parser.css_urls):
         if u and not u.lower().startswith(('data:', 'javascript:', 'about:')):
             candidates.add(urljoin(BASE_URL, u))
 
-    # Filter by extension
+    # Also do a simple regex search through the HTML for any URLs that look like media files
+    html_text = html_bytes.decode('utf-8', 'ignore')
+    print("Scanning for additional media URLs...")
+    
+    # Look for URLs ending with media extensions - more comprehensive patterns
+    patterns = [
+        # Standard URLs with extensions
+        r'(?:https?://[^"\'\s<>]*\.(?:' + '|'.join(allowed_ext) + r')(?:\?[^"\'\s<>]*)?)',
+        # Relative URLs with extensions  
+        r'(?:/[^"\'\s<>]*\.(?:' + '|'.join(allowed_ext) + r')(?:\?[^"\'\s<>]*)?)',
+        # URLs in quotes
+        r'["\']([^"\']*\.(?:' + '|'.join(allowed_ext) + r')(?:\?[^"\']*)?)["\']',
+        # Data attributes
+        r'data-[^=]*=["\']([^"\']*\.(?:' + '|'.join(allowed_ext) + r')(?:\?[^"\']*)?)["\']'
+    ]
+    
+    regex_found = set()
+    for pattern in patterns:
+        matches = re.findall(pattern, html_text, re.IGNORECASE)
+        for match in matches:
+            # Handle both full matches and group matches
+            url = match if isinstance(match, str) else match[0] if match else ''
+            if url and not url.lower().startswith(('data:', 'javascript:', 'about:')):
+                regex_found.add(url)
+    
+    # Add regex found URLs to candidates
+    for url in regex_found:
+        candidates.add(urljoin(BASE_URL, url))
+
+    print(f"Found {len(candidates)} potential media URLs")
+
+    # Filter by extension and validate URLs
     media_urls = set()
+    invalid_count = 0
     for u in candidates:
-        p = urlparse(u)
-        path = p.path or ''
-        ext = path.rsplit('.',1)[-1].lower() if '.' in path.rsplit('/',1)[-1] else ''
-        if ext in allowed_ext:
-            media_urls.add(u)
+        try:
+            p = urlparse(u)
+            if not p.scheme:
+                invalid_count += 1
+                continue  # Skip invalid URLs
+            path = p.path or ''
+            ext = path.rsplit('.',1)[-1].lower() if '.' in path.rsplit('/',1)[-1] else ''
+            if ext in allowed_ext:
+                media_urls.add(u)
+        except Exception:
+            invalid_count += 1
+            continue  # Skip malformed URLs
+    
+    if invalid_count > 0:
+        print(f"Filtered out {invalid_count} invalid URLs")
 
     if not media_urls:
         print("No media files found on the webpage.")
@@ -192,7 +250,8 @@ def main():
             'status': 'error' if err else 'ok', 
             'content_type': ctype, 
             'size': len(data) if data else 0, 
-            'path': None
+            'path': None,
+            'error': err if err else None
         }
         
         if err or not data:
@@ -218,6 +277,7 @@ def main():
         # Determine category
         category = get_file_category(ext)
         if not category:
+            entry['error'] = f'Unsupported file type: {ext}'
             count_err += 1
             manifest.append(entry)
             continue
