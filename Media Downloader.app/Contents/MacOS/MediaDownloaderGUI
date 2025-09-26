@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Get the directory containing this script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Change to the app directory
+cd "$DIR"
+
+# Run the GUI
+/usr/bin/python3 simple_gui.py
