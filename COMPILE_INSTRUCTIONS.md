@@ -20,6 +20,11 @@ The script will automatically handle everything and create a ready-to-distribute
 - **Internet connection** (for downloading dependencies)
 - **~50MB free disk space** (for build files)
 
+### Project Files Needed
+- `imagedownloader.py` - Main Python script
+- `compile_macos_app.sh` - Build script (included)
+- `AppIcon.appiconset/` - Professional app icon set (included)
+
 ### Check Your Setup
 ```bash
 # Verify Python 3 is installed
@@ -27,6 +32,9 @@ python3 --version
 
 # Verify you're on macOS
 sw_vers
+
+# Verify app icon is present
+ls AppIcon.appiconset/
 ```
 
 ## 🛠️ Manual Compilation Steps
@@ -93,6 +101,7 @@ The `compile_macos_app.sh` script provides:
 - ✅ **Build cleaning** - Removes old builds automatically
 - ✅ **Console executable** - Creates standalone binary
 - ✅ **App bundle creation** - Builds proper .app structure
+- ✅ **Professional app icon** - Uses AppIcon.appiconset for native look
 - ✅ **GUI wrapper** - Adds AppleScript-based interface
 - ✅ **Testing** - Validates build integrity
 - ✅ **Deployment** - Copies to Desktop automatically
@@ -136,7 +145,7 @@ Target: macOS 10.13+
 ✅ Console executable installed
 
 ▶ Creating app icon...
-✅ App icon created
+✅ Professional app icon created from AppIcon.appiconset
 
 ▶ Validating app bundle...
 ✅ App bundle validation passed

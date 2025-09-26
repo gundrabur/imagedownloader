@@ -33,6 +33,7 @@ This document describes all the files in the Media Downloader project and their 
 | `requirements.txt` | **Dependencies** | Python package requirements (note: only stdlib used) |
 | `.gitignore` | **Git exclusions** | Files to exclude from version control |
 | `Media Downloader.spec` | **PyInstaller spec** | PyInstaller configuration (auto-generated) |
+| `AppIcon.appiconset/` | **App icon set** | Professional macOS app icon in all required sizes |
 
 ## 📱 macOS App Bundle (Generated)
 

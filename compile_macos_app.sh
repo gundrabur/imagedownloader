@@ -356,18 +356,67 @@ chmod +x "$MACOS_DIR/MediaDownloader"
 
 print_success "Console executable installed"
 
-# Create app icon (optional)
+# Create app icon from AppIcon.appiconset
 print_status "Creating app icon..."
 
-# Try to create a simple icon using system tools
-if command -v sips &> /dev/null; then
-    # Create a simple colored square as icon
-    mkdir -p "AppIcon.iconset"
+# Check if AppIcon.appiconset exists
+if [[ -d "AppIcon.appiconset" ]]; then
+    print_info "Found AppIcon.appiconset - creating app icon..."
     
-    # Create different sizes (simplified)
-    for size in 16 32 128 256 512; do
-        # Create a simple colored rectangle using system tools
-        python3 -c "
+    # Convert AppIcon.appiconset to iconset format for iconutil
+    if command -v iconutil &> /dev/null; then
+        # Create temporary iconset directory
+        TEMP_ICONSET="TempIcon.iconset"
+        mkdir -p "$TEMP_ICONSET"
+        
+        # Copy and rename files to iconutil naming convention
+        cp "AppIcon.appiconset/mac-16x16.png" "$TEMP_ICONSET/icon_16x16.png" 2>/dev/null || true
+        cp "AppIcon.appiconset/mac-16x16@2x.png" "$TEMP_ICONSET/icon_16x16@2x.png" 2>/dev/null || true
+        cp "AppIcon.appiconset/mac-32x32.png" "$TEMP_ICONSET/icon_32x32.png" 2>/dev/null || true
+        cp "AppIcon.appiconset/mac-32x32@2x.png" "$TEMP_ICONSET/icon_32x32@2x.png" 2>/dev/null || true
+        cp "AppIcon.appiconset/mac-128x128.png" "$TEMP_ICONSET/icon_128x128.png" 2>/dev/null || true
+        cp "AppIcon.appiconset/mac-128x128@2x.png" "$TEMP_ICONSET/icon_128x128@2x.png" 2>/dev/null || true
+        cp "AppIcon.appiconset/mac-256x256.png" "$TEMP_ICONSET/icon_256x256.png" 2>/dev/null || true
+        cp "AppIcon.appiconset/mac-256x256@2x.png" "$TEMP_ICONSET/icon_256x256@2x.png" 2>/dev/null || true
+        cp "AppIcon.appiconset/mac-512x512.png" "$TEMP_ICONSET/icon_512x512.png" 2>/dev/null || true
+        cp "AppIcon.appiconset/mac-512x512@2x.png" "$TEMP_ICONSET/icon_512x512@2x.png" 2>/dev/null || true
+        
+        # Create .icns file
+        iconutil -c icns "$TEMP_ICONSET" -o "$RESOURCES_DIR/AppIcon.icns"
+        
+        # Clean up temporary iconset
+        rm -rf "$TEMP_ICONSET"
+        
+        if [[ -f "$RESOURCES_DIR/AppIcon.icns" ]]; then
+            print_success "Professional app icon created from AppIcon.appiconset"
+            
+            # Update Info.plist to reference the icon
+            # Add CFBundleIconFile key before CFBundleInfoDictionaryVersion
+            sed -i '' 's|<key>CFBundleInfoDictionaryVersion</key>|<key>CFBundleIconFile</key>\
+    <string>AppIcon</string>\
+    <key>CFBundleIconName</key>\
+    <string>AppIcon</string>\
+    <key>CFBundleInfoDictionaryVersion</key>|' "$CONTENTS_DIR/Info.plist"
+        else
+            print_error "Failed to create .icns file from AppIcon.appiconset"
+            print_info "Using default system icon"
+        fi
+    else
+        print_error "iconutil not found - cannot create icon from AppIcon.appiconset"
+        print_info "Using default system icon"
+    fi
+else
+    print_info "AppIcon.appiconset not found - creating simple app icon..."
+    
+    # Fallback to simple icon creation
+    if command -v sips &> /dev/null; then
+        # Create a simple colored square as icon
+        mkdir -p "AppIcon.iconset"
+        
+        # Create different sizes (simplified)
+        for size in 16 32 128 256 512; do
+            # Create a simple colored rectangle using system tools
+            python3 -c "
 import subprocess
 import os
 # Create a simple icon using system's screenshot capability
@@ -378,23 +427,24 @@ try:
 except:
     pass
 " 2>/dev/null || true
-    done
-    
-    # Try to build .icns file
-    if [[ -d "AppIcon.iconset" ]]; then
-        iconutil -c icns "AppIcon.iconset" -o "$RESOURCES_DIR/AppIcon.icns" 2>/dev/null || true
-        rm -rf "AppIcon.iconset" 2>/dev/null || true
+        done
         
-        if [[ -f "$RESOURCES_DIR/AppIcon.icns" ]]; then
-            print_success "App icon created"
+        # Try to build .icns file
+        if [[ -d "AppIcon.iconset" ]]; then
+            iconutil -c icns "AppIcon.iconset" -o "$RESOURCES_DIR/AppIcon.icns" 2>/dev/null || true
+            rm -rf "AppIcon.iconset" 2>/dev/null || true
+            
+            if [[ -f "$RESOURCES_DIR/AppIcon.icns" ]]; then
+                print_success "Simple app icon created"
+            else
+                print_info "Using default app icon"
+            fi
         else
             print_info "Using default app icon"
         fi
     else
-        print_info "Using default app icon"
+        print_info "Using default app icon (sips not available)"
     fi
-else
-    print_info "Using default app icon (sips not available)"
 fi
 
 # Validate app bundle
@@ -469,6 +519,7 @@ App Details:
 Files:
 - Console Executable: $(ls -lh dist/MediaDownloader | awk '{print $5}')
 - App Bundle Size: $(du -sh "$APP_NAME.app" | cut -f1)
+- App Icon: $(if [[ -f "$RESOURCES_DIR/AppIcon.icns" ]]; then echo "Professional icon included ✅"; else echo "Default system icon"; fi)
 
 Build Status: SUCCESS ✅
 EOF

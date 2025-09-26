@@ -19,6 +19,7 @@ A native macOS application that downloads images, videos, and audio files from a
 ## Features
 
 - ✨ **Simple Interface**: Easy-to-use dialog prompts
+- 🎨 **Professional Icon**: High-resolution app icon for all macOS versions
 - 📁 **Organized Downloads**: Files sorted into images/, videos/, and audio/ folders  
 - 🚀 **Fast Downloads**: Multi-threaded downloading with progress tracking
 - 🔍 **Smart Detection**: Finds media files in HTML, CSS, and JavaScript
