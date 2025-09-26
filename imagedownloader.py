@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.parse import urljoin, urlparse
 from html.parser import HTMLParser
+import platform
 
 # Configuration
 if len(sys.argv) < 2:
@@ -23,23 +24,40 @@ if len(sys.argv) < 2:
 else:
     BASE_URL = sys.argv[1]
 
-# Create timestamped folder in active user's Downloads directory
+# Create timestamped folder in active user's Downloads directory (cross-platform, including OneDrive on Windows)
 def get_downloads_folder():
-    """Get the active user's Downloads folder path."""
-    # Try to get user's Downloads folder
-    downloads_paths = [
-        Path.home() / "Downloads",  # Standard location
-        Path.home() / "downloads",  # Lowercase variant
-        os.path.expanduser("~/Downloads"),  # Alternative method
+    """Get the active user's Downloads folder path (handles common Windows OneDrive cases)."""
+    home = Path.home()
+
+    candidates = [
+        home / "Downloads",
+        home / "downloads",
     ]
-    
-    for path in downloads_paths:
-        if os.path.exists(path) and os.path.isdir(path):
-            return str(path)
-    
-    # Fallback to current directory if Downloads folder not found
+
+    # Windows specific: check OneDrive variations
+    if platform.system().lower() == 'windows':
+        onedrive = os.environ.get('OneDrive') or os.environ.get('ONEDRIVE')
+        if onedrive:
+            candidates.append(Path(onedrive) / 'Downloads')
+        # Corporate managed devices sometimes have OneDrive - <OrgName>
+        for env_var in ['OneDriveCommercial', 'OneDriveConsumer']:
+            if os.environ.get(env_var):
+                candidates.append(Path(os.environ[env_var]) / 'Downloads')
+
+        # Windows Known Folders (fallback via USERPROFILE)
+        userprofile = os.environ.get('USERPROFILE')
+        if userprofile:
+            candidates.append(Path(userprofile) / 'Downloads')
+
+    for p in candidates:
+        try:
+            if p.exists() and p.is_dir():
+                return str(p)
+        except Exception:
+            continue
+
     print("Warning: Downloads folder not found, using current directory")
-    return "."
+    return os.getcwd()
 
 downloads_dir = get_downloads_folder()
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -48,10 +66,12 @@ OUT_DIR = os.path.join(downloads_dir, f"imagedownloader_{domain}_{timestamp}")
 
 print(f"Output directory: {OUT_DIR}")
 
-UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-TIMEOUT = 30
-
-UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+# User-Agent / timeout (removed duplicate constants)
+UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
 TIMEOUT = 30
 
 # Supported media file extensions organized by type
@@ -232,12 +252,22 @@ def main():
         return mapping.get(ct, '')
 
     media_list = sorted(media_urls)
+
+    # Choose basic progress bar characters for Windows terminal if needed
+    use_simple_bar = False
+    if platform.system().lower() == 'windows':
+        # Heuristic: Some Windows terminals may not render block characters well
+        if not os.environ.get('WT_SESSION') and 'vscode' not in os.environ.get('TERM_PROGRAM','').lower():
+            use_simple_bar = True
     for i, url in enumerate(media_list):
         # Simple progress bar
         progress = (i + 1) / len(media_list)
         bar_length = 50
         filled_length = int(bar_length * progress)
-        bar = '█' * filled_length + '░' * (bar_length - filled_length)
+        if use_simple_bar:
+            bar = '#' * filled_length + '-' * (bar_length - filled_length)
+        else:
+            bar = '█' * filled_length + '░' * (bar_length - filled_length)
         print(f'\rProgress: |{bar}| {i + 1}/{len(media_list)} ({progress:.1%})', end='', flush=True)
         
         p = urlparse(url)
@@ -246,11 +276,12 @@ def main():
             
         data, ctype, err = fetch(url)
         entry = {
-            'url': url, 
-            'status': 'error' if err else 'ok', 
-            'content_type': ctype, 
-            'size': len(data) if data else 0, 
-            'path': None,
+            'url': url,
+            'status': 'error' if err else 'ok',
+            'content_type': ctype,
+            'size': len(data) if data else 0,
+            'path': None,  # normalized forward-slash relative path after save
+            'category': None,
             'error': err if err else None
         }
         
@@ -274,7 +305,7 @@ def main():
                 fname = f"{fname}.unknown"
                 ext = 'unknown'
 
-        # Determine category
+        # Determine category once and store explicitly (Windows path safe)
         category = get_file_category(ext)
         if not category:
             entry['error'] = f'Unsupported file type: {ext}'
@@ -297,7 +328,8 @@ def main():
         try:
             with open(local_path, 'wb') as f:
                 f.write(data)
-            entry['path'] = os.path.join(category, safe_fname)
+            entry['path'] = f"{category}/{safe_fname}"  # use forward slashes for portability
+            entry['category'] = category
             count_ok += 1
         except Exception as e:
             entry['error'] = str(e)
@@ -327,8 +359,8 @@ def main():
     if count_ok > 0:
         categories = {}
         for entry in manifest:
-            if entry['status'] == 'ok' and entry['path']:
-                cat = entry['path'].split('/')[0]
+            if entry['status'] == 'ok' and entry.get('category'):
+                cat = entry['category']
                 categories[cat] = categories.get(cat, 0) + 1
         
         print("\n📊 Files by category:")
