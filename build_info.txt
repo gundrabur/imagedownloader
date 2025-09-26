@@ -1,0 +1,19 @@
+Media Downloader - Build Information
+====================================
+
+Build Date: Fri Sep 26 13:53:33 CEST 2025
+macOS Version: 15.7
+Python Version: Python 3.12.4
+PyInstaller Version: 6.16.0
+
+App Details:
+- Name: Media Downloader
+- Version: 1.0.0  
+- Bundle ID: com.mediadownloader.app
+- Minimum macOS: 10.13
+
+Files:
+- Console Executable: 7.3M
+- App Bundle Size: 7.3M
+
+Build Status: SUCCESS ✅

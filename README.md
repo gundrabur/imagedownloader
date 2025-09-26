@@ -11,6 +11,7 @@ A Python script that downloads images, videos, and audio files from any webpage 
 - **Duplicate handling**: Handles duplicate filenames automatically
 - **Timestamped folders**: Creates unique folders for each download session
 - **Summary reporting**: Provides detailed download statistics
+- **Native macOS app**: Can be compiled to a native macOS application
 
 ## Supported File Types
 
@@ -66,6 +67,30 @@ After completion, the script shows:
 - Error count and success rate
 - Output folder location
 - Manifest file location
+
+## 🍎 Building Native macOS App
+
+You can compile this Python script into a native macOS application for easy distribution and use.
+
+### Quick Build
+```bash
+# One-time setup
+./setup_dev_environment.sh
+
+# Build the app (run after any changes to imagedownloader.py)
+./compile_macos_app.sh
+```
+
+### What You Get
+- **Native .app bundle** ready for distribution
+- **AppleScript dialogs** for user-friendly interaction
+- **Automatic Downloads folder** integration
+- **No Python installation** required for end users
+
+### For Developers
+See **[COMPILE_INSTRUCTIONS.md](COMPILE_INSTRUCTIONS.md)** for detailed compilation instructions, troubleshooting, and customization options.
+
+The compiled app will be created on your Desktop and can be shared with anyone running macOS 10.13 or later.
 
 ## Configuration
 

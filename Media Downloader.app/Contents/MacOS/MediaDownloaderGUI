@@ -6,5 +6,5 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Change to the app directory
 cd "$DIR"
 
-# Run the GUI
+# Run the GUI with system Python
 /usr/bin/python3 simple_gui.py
