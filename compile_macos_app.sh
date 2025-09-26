@@ -102,10 +102,10 @@ if [[ -d "dist" ]]; then
     print_info "Removed dist directory"
 fi
 
-if [[ -d "$APP_NAME.app" ]]; then
-    rm -rf "$APP_NAME.app"
-    print_info "Removed previous app bundle"
-fi
+print_success "Cleanup complete"
+
+# Create dist directory for final app
+mkdir -p dist
 
 if [[ -f "*.spec" ]]; then
     rm -f *.spec
@@ -143,7 +143,7 @@ fi
 # Create app bundle structure
 print_status "Creating macOS app bundle..."
 
-APP_DIR="$APP_NAME.app"
+APP_DIR="dist/$APP_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
@@ -484,21 +484,6 @@ else
     exit 1
 fi
 
-# Copy to Desktop
-print_status "Deploying app..."
-
-if [[ -d "$HOME/Desktop" ]]; then
-    # Remove existing app on Desktop
-    if [[ -d "$HOME/Desktop/$APP_NAME.app" ]]; then
-        rm -rf "$HOME/Desktop/$APP_NAME.app"
-    fi
-    
-    cp -r "$APP_NAME.app" "$HOME/Desktop/"
-    print_success "App copied to Desktop"
-else
-    print_info "Desktop not found - app remains in project directory"
-fi
-
 # Generate build info
 BUILD_INFO_FILE="build_info.txt"
 cat > "$BUILD_INFO_FILE" << EOF
@@ -518,7 +503,7 @@ App Details:
 
 Files:
 - Console Executable: $(ls -lh dist/MediaDownloader | awk '{print $5}')
-- App Bundle Size: $(du -sh "$APP_NAME.app" | cut -f1)
+- App Bundle Size: $(du -sh "$APP_DIR" | cut -f1)
 - App Icon: $(if [[ -f "$RESOURCES_DIR/AppIcon.icns" ]]; then echo "Professional icon included ✅"; else echo "Default system icon"; fi)
 
 Build Status: SUCCESS ✅
@@ -531,10 +516,10 @@ echo ""
 echo -e "${BOLD}${GREEN}📱 App Information:${NC}"
 echo -e "${CYAN}   Name: $APP_NAME${NC}"
 echo -e "${CYAN}   Version: $APP_VERSION${NC}"
-echo -e "${CYAN}   Size: $(du -sh "$APP_NAME.app" | cut -f1)${NC}"
+echo -e "${CYAN}   Size: $(du -sh "$APP_DIR" | cut -f1)${NC}"
 echo ""
 echo -e "${BOLD}${BLUE}📂 Locations:${NC}"
-echo -e "${CYAN}   Project: $(pwd)/$APP_NAME.app${NC}"
+echo -e "${CYAN}   Dist folder: $(pwd)/$APP_DIR${NC}"
 if [[ -d "$HOME/Desktop/$APP_NAME.app" ]]; then
     echo -e "${CYAN}   Desktop: ~/Desktop/$APP_NAME.app${NC}"
 fi
