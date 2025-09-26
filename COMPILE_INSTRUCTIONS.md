@@ -1,6 +1,6 @@
-# 📱 Compiling Media Downloader to macOS Native App
+# 📱 Compiling Media Downloader (macOS & Windows)
 
-This guide provides complete instructions for compiling the Python Media Downloader script into a native macOS application. Follow these steps whenever you make changes to `imagedownloader.py`.
+This guide provides complete instructions for compiling the Python Media Downloader script into a native macOS application and a standalone Windows executable. Follow these steps whenever you make changes to `imagedownloader.py`.
 
 ## 🎯 Quick Start
 
@@ -10,20 +10,34 @@ If you just want to build the app immediately:
 ./compile_macos_app.sh
 ```
 
+On Windows (PowerShell or Command Prompt):
+
+```bat
+compile_windows_app.bat
+```
+
 The script will automatically handle everything and create a ready-to-distribute app.
 
 ## 📋 Prerequisites
 
 ### System Requirements
-- **macOS 10.13 or later** (for building and running)
-- **Python 3.7+** installed on your system
-- **Internet connection** (for downloading dependencies)
-- **~50MB free disk space** (for build files)
+macOS build:
+    - **macOS 10.13 or later** (for building and running)
+    - **Python 3.7+** installed on your system
+    - **Internet connection** (for downloading dependencies)
+    - **~50MB free disk space** (for build files)
+
+Windows build:
+    - **Windows 10/11**
+    - **Python 3.8+** on PATH ("Add to PATH" selected during install)
+    - **PowerShell 5+** (for Compress-Archive) – default on Windows 10/11
+    - **~60MB free disk space**
 
 ### Project Files Needed
 - `imagedownloader.py` - Main Python script
-- `compile_macos_app.sh` - Build script (included)
-- `AppIcon.appiconset/` - Professional app icon set (included)
+- `compile_macos_app.sh` - macOS build script
+- `compile_windows_app.bat` - Windows build script
+- `AppIcon.appiconset/` - Professional macOS icon set (optional for Windows)
 
 ### Check Your Setup
 ```bash
@@ -93,7 +107,7 @@ open "Media Downloader.app"
 ## 🔧 Automated Build Script
 
 ### Features
-The `compile_macos_app.sh` script provides:
+The `compile_macos_app.sh` (macOS) and `compile_windows_app.bat` (Windows) scripts provide:
 
 - ✅ **Prerequisite checking** - Validates Python, macOS version
 - ✅ **Environment setup** - Creates/activates virtual environment  
@@ -107,13 +121,32 @@ The `compile_macos_app.sh` script provides:
 - ✅ **Deployment** - Copies to Desktop automatically
 - ✅ **Build reporting** - Generates detailed build info
 
-### Usage
+### Usage (macOS)
 ```bash
 # Make executable (first time only)
 chmod +x compile_macos_app.sh
 
 # Run the build
 ./compile_macos_app.sh
+```
+
+### Usage (Windows)
+Run from project root:
+
+```bat
+
+```
+
+Outputs:
+```
+dist/MediaDownloader.exe          # Standalone executable
+build/MediaDownloader_windows_x64_v<version>.zip  # Zipped distribution
+build_info_windows.txt            # Build metadata
+```
+
+Run the tool:
+```
+dist\MediaDownloader.exe https://example.com
 ```
 
 ### Build Output
@@ -161,10 +194,15 @@ Target: macOS 10.13+
 
 ## 📦 Distribution
 
-### For End Users
+### For End Users (macOS)
 1. **Share** the entire `Media Downloader.app` folder
 2. **Recipients** drag it to their Applications folder
 3. **First launch** may require right-click → Open (security)
+
+### For End Users (Windows)
+Option A: Share the ZIP produced under `build/`. User extracts and runs `MediaDownloader.exe`.
+
+Option B: Share only `MediaDownloader.exe` (self-contained). No install required.
 
 ### File Structure
 ```
@@ -181,7 +219,7 @@ Media Downloader.app/
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Common Issues (macOS)
 
 **"Permission denied" when running compile script:**
 ```bash
@@ -211,6 +249,15 @@ sudo spctl --master-disable
 **"No module named 'imagedownloader'":**
 - Make sure `imagedownloader.py` exists in the project directory
 - Check that you're running the script from the correct location
+
+### Common Issues (Windows)
+**Python not found**: Ensure Python installed and added to PATH. Open new terminal.
+
+**Compress-Archive failure**: Update PowerShell or manually zip the `dist/MediaDownloader.exe` with a README.
+
+**SmartScreen warning**: Click "More info" → "Run anyway" (expected for unsigned executables).
+
+**Unicode characters not rendering**: Run in Windows Terminal or VS Code integrated terminal.
 
 ### Build Debugging
 
@@ -243,7 +290,7 @@ python3 simple_gui.py
 
 ## 🔄 Continuous Integration
 
-### Automating Builds
+### Automating Builds (macOS)
 
 For automatic building on code changes, add to your workflow:
 
@@ -297,22 +344,35 @@ pyinstaller \
 ## 📊 Build Performance
 
 ### Typical Build Times
-- **Clean build:** 30-60 seconds
-- **Incremental build:** 15-30 seconds  
-- **App bundle creation:** 5-10 seconds
+macOS:
+    - **Clean build:** 30-60 seconds
+    - **Incremental build:** 15-30 seconds  
+    - **App bundle creation:** 5-10 seconds
+
+Windows:
+    - **Clean build:** 25-50 seconds
+    - **Incremental build:** 10-25 seconds
 
 ### File Sizes
-- **Console executable:** ~15-25 MB
-- **Complete app bundle:** ~20-30 MB
-- **Compressed distribution:** ~8-12 MB
+macOS:
+    - **Console executable:** ~15-25 MB
+    - **Complete app bundle:** ~20-30 MB
+    - **Compressed distribution:** ~8-12 MB
+
+Windows:
+    - **Executable:** ~15-25 MB
+    - **ZIP distribution:** ~8-15 MB
 
 ---
 
 ## 🎯 Summary
 
-1. **Run** `./compile_macos_app.sh` to build everything automatically
-2. **Find** your app on the Desktop ready for distribution  
-3. **Share** the entire `.app` folder with users
-4. **Repeat** the process whenever you update `imagedownloader.py`
+macOS:
+    1. Run `./compile_macos_app.sh`
+    2. Distribute `Media Downloader.app`
 
-The compilation script handles all complexity and creates a professional, distributable macOS application that users can install and run like any native Mac app.
+Windows:
+    1. Run `compile_windows_app.bat`
+    2. Distribute `dist/MediaDownloader.exe` or ZIP in `build/`
+
+Repeat the respective build scripts after modifying `imagedownloader.py`. Both scripts automate environment setup, building, and packaging.
