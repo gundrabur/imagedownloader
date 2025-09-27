@@ -8,10 +8,13 @@ import sys
 import re
 import json
 import hashlib
+import time
+import gzip
 from datetime import datetime
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.parse import urljoin, urlparse
+from urllib.error import HTTPError, URLError
 from html.parser import HTMLParser
 import platform
 
@@ -66,11 +69,11 @@ OUT_DIR = os.path.join(downloads_dir, f"imagedownloader_{domain}_{timestamp}")
 
 print(f"Output directory: {OUT_DIR}")
 
-# User-Agent / timeout (removed duplicate constants)
+# User-Agent / timeout (updated to latest Chrome version)
 UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
+    "Chrome/118.0.0.0 Safari/537.36"
 )
 TIMEOUT = 30
 
@@ -99,15 +102,80 @@ os.makedirs(os.path.join(OUT_DIR, 'images'), exist_ok=True)
 os.makedirs(os.path.join(OUT_DIR, 'videos'), exist_ok=True)
 os.makedirs(os.path.join(OUT_DIR, 'audio'), exist_ok=True)
 
-def fetch(url):
-    try:
-        req = Request(url, headers={'User-Agent': UA})
-        with urlopen(req, timeout=TIMEOUT) as r:
-            data = r.read()
-            ctype = r.headers.get('Content-Type','')
-            return data, ctype, None
-    except Exception as e:
-        return None, None, str(e)
+def fetch(url, retries=2, is_main_page=False):
+    """Enhanced fetch function with better headers to avoid 403 errors."""
+    for attempt in range(retries + 1):
+        try:
+            # More comprehensive headers to appear more like a real browser
+            headers = {
+                'User-Agent': UA,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Cache-Control': 'max-age=0'
+            }
+            
+            # Add referer for media files (not for main page)
+            if not is_main_page:
+                parsed_url = urlparse(url)
+                headers['Referer'] = f"{parsed_url.scheme}://{parsed_url.netloc}/"
+            
+            req = Request(url, headers=headers)
+            with urlopen(req, timeout=TIMEOUT) as r:
+                data = r.read()
+                ctype = r.headers.get('Content-Type','')
+                
+                # Handle different compression encodings
+                encoding = r.headers.get('Content-Encoding', '').lower()
+                if encoding == 'gzip':
+                    try:
+                        data = gzip.decompress(data)
+                    except gzip.BadGzipFile:
+                        pass  # Data wasn't actually gzipped
+                elif encoding == 'deflate':
+                    try:
+                        import zlib
+                        data = zlib.decompress(data)
+                    except zlib.error:
+                        pass  # Data wasn't actually deflated
+                elif encoding == 'br':
+                    try:
+                        import brotli
+                        data = brotli.decompress(data)
+                    except ImportError:
+                        if is_main_page:
+                            print("Warning: Brotli compression detected but brotli module not available")
+                    except Exception:
+                        pass  # Data wasn't actually brotli compressed
+                
+                return data, ctype, None
+                
+        except HTTPError as e:
+            if e.code == 403 and attempt < retries:
+                print(f"  403 Forbidden, retrying ({attempt + 1}/{retries})...")
+                time.sleep(1)  # Brief delay before retry
+                continue
+            elif e.code == 429 and attempt < retries:  # Rate limiting
+                print(f"  Rate limited, waiting before retry ({attempt + 1}/{retries})...")
+                time.sleep(2)
+                continue
+            return None, None, f"HTTP Error {e.code}: {e.reason}"
+        except URLError as e:
+            return None, None, f"URL Error: {e.reason}"
+        except Exception as e:
+            if attempt < retries:
+                time.sleep(0.5)
+                continue
+            return None, None, str(e)
+    
+    return None, None, "Max retries exceeded"
 
 class MediaExtractor(HTMLParser):
     def __init__(self):
@@ -160,7 +228,7 @@ class MediaExtractor(HTMLParser):
 def main():
     """Main function to download media from a webpage."""
     print("Fetching webpage...")
-    html_bytes, ctype, err = fetch(BASE_URL)
+    html_bytes, ctype, err = fetch(BASE_URL, is_main_page=True)
     if err:
         print(f'ERROR: fetching base page failed: {err}', file=sys.stderr)
         sys.exit(1)
@@ -275,6 +343,10 @@ def main():
             continue
             
         data, ctype, err = fetch(url)
+        
+        # Small delay between downloads to be respectful
+        if i > 0:
+            time.sleep(0.1)
         entry = {
             'url': url,
             'status': 'error' if err else 'ok',
