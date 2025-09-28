@@ -1,6 +1,6 @@
 # Image Downloader Requirements
-# This project uses only Python standard library modules
-# No external dependencies required
+# Core dependencies
+brotli>=1.0.0
 
 # For development/testing (optional):
 # pytest>=7.0.0
