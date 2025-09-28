@@ -1,6 +1,6 @@
 Media Downloader - Windows Build Info
 ==================================
-Build Date: 28.09.2025 21:48:37,13
+Build Date: 28.09.2025 21:49:49,61
 Python Version: 3.13.7
 PyInstaller Version: 6.16.0
 App Version: 1.0.0
