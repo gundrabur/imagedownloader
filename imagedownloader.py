@@ -301,6 +301,60 @@ def main():
 
     print(f"Found {len(media_urls)} media files to download")
 
+    # If more than 250 files, filter to only images and get the 250 largest
+    if len(media_urls) > 250:
+        print(f"⚠️  More than 250 files detected ({len(media_urls)} files)")
+        print("📸 Filtering to images only and checking sizes...")
+        
+        # Filter to only image URLs based on extension
+        image_urls = set()
+        for u in media_urls:
+            try:
+                p = urlparse(u)
+                path = p.path or ''
+                ext = path.rsplit('.',1)[-1].lower() if '.' in path.rsplit('/',1)[-1] else ''
+                if ext in image_ext:
+                    image_urls.add(u)
+            except Exception:
+                continue
+        
+        if not image_urls:
+            print("❌ No image files found after filtering.")
+            return
+        
+        print(f"Found {len(image_urls)} image files")
+        
+        # Get file sizes for all images
+        print("📏 Checking file sizes (this may take a moment)...")
+        image_sizes = []
+        for i, url in enumerate(sorted(image_urls)):
+            # Progress indicator
+            if (i + 1) % 10 == 0 or i == 0:
+                print(f"  Checking {i + 1}/{len(image_urls)}...", end='\r')
+            
+            data, ctype, err = fetch(url)
+            if data and not err:
+                image_sizes.append((url, len(data)))
+            time.sleep(0.05)  # Small delay to be respectful
+        
+        print()  # New line after progress
+        
+        if not image_sizes:
+            print("❌ Could not determine sizes for any images.")
+            return
+        
+        # Sort by size (largest first) and take top 250
+        image_sizes.sort(key=lambda x: x[1], reverse=True)
+        top_250 = image_sizes[:250]
+        
+        # Update media_urls to only include the top 250 largest images
+        media_urls = set(url for url, size in top_250)
+        
+        total_size_mb = sum(size for _, size in top_250) / (1024 * 1024)
+        print(f"✅ Selected 250 largest images (total size: {total_size_mb:.1f} MB)")
+        print(f"   Largest: {top_250[0][1] / (1024 * 1024):.2f} MB")
+        print(f"   Smallest: {top_250[-1][1] / (1024 * 1024):.2f} MB")
+
     # Download media with progress bar
     manifest = []
     count_ok = 0
